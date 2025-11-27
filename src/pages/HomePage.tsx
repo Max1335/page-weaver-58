@@ -123,7 +123,6 @@ const HomePage = () => {
       <header className="bg-gradient-hero text-white py-12 px-4 sm:px-6 lg:px-8 shadow-lg">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-6">
-            <Briefcase className="h-10 w-10" />
             <h1 className="text-4xl font-bold">Робота в Україні</h1>
           </div>
           <p className="text-xl text-blue-50 mb-8">
