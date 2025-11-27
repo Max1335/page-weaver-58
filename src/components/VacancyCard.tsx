@@ -26,6 +26,10 @@ const experienceLabels: Record<string, string> = {
   '10-plus-years': 'Більше 10 років',
 };
 
+const getExperienceLabel = (experience: string): string => {
+  return experienceLabels[experience] || 'Не вказано';
+};
+
 const sourceColors: Record<string, string> = {
   'work.ua': 'bg-blue-500',
   'robota.ua': 'bg-green-500',
@@ -70,7 +74,7 @@ export const VacancyCard = ({ vacancy }: VacancyCardProps) => {
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary" className="gap-1">
               <Briefcase className="h-3 w-3" />
-              {experienceLabels[vacancy.experience_required]}
+              {getExperienceLabel(vacancy.experience_required)}
             </Badge>
             <Badge variant="secondary" className="gap-1">
               <Clock className="h-3 w-3" />

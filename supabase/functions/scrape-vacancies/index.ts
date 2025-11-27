@@ -45,9 +45,9 @@ Deno.serve(async (req) => {
     console.log(`Starting scrape for source: ${source}`);
 
     const sources = source === 'all' ? ['work.ua', 'robota.ua', 'dou.ua'] : [source];
-    const results = [];
-
-    for (const currentSource of sources) {
+    
+    // Scrape all sources concurrently using Promise.all
+    const scrapingPromises = sources.map(async (currentSource) => {
       // Create scraping log entry
       const { data: logEntry } = await supabase
         .from('scraping_logs')
@@ -101,15 +101,15 @@ Deno.serve(async (req) => {
           })
           .eq('id', logEntry.id);
 
-        results.push({
+        console.log(`Completed scraping ${currentSource}: ${added} added, ${updated} updated`);
+        
+        return {
           source: currentSource,
           success: true,
           vacancies_found: vacancies.length,
           vacancies_added: added,
           vacancies_updated: updated,
-        });
-
-        console.log(`Completed scraping ${currentSource}: ${added} added, ${updated} updated`);
+        };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error(`Error scraping ${currentSource}:`, error);
@@ -124,13 +124,15 @@ Deno.serve(async (req) => {
           })
           .eq('id', logEntry.id);
 
-        results.push({
+        return {
           source: currentSource,
           success: false,
           error: errorMessage,
-        });
+        };
       }
-    }
+    });
+
+    const results = await Promise.all(scrapingPromises);
 
     // Deactivate old vacancies
     const { data: deactivatedCount } = await supabase.rpc('deactivate_old_vacancies');
@@ -193,7 +195,7 @@ async function scrapeWorkUa(): Promise<VacancyData[]> {
     
     let count = 0;
     for (const card of Array.from(jobCards)) {
-      if (count >= 20) break;
+      if (count >= 50) break;
       
       try {
         const linkElement = card.querySelector('h2 a, a[href*="/jobs/"]');
@@ -207,8 +209,8 @@ async function scrapeWorkUa(): Promise<VacancyData[]> {
         
         if (!title) continue;
         
-        const companyElement = card.querySelector('span.add-top-xs, [class*="company"]');
-        const company = companyElement?.textContent?.trim() || 'Не вказано';
+        const companyElement = card.querySelector('span.add-top-xs, a[class*="company"], div[class*="company"], span[class*="company"]');
+        const company = companyElement?.textContent?.trim() || 'Компанія не вказана';
         
         // Extract location, salary, and other details from card text
         const cardText = card.textContent?.toLowerCase() || '';
@@ -329,7 +331,7 @@ async function scrapeRobotaUa(): Promise<VacancyData[]> {
     
     let count = 0;
     for (const card of Array.from(jobCards)) {
-      if (count >= 20) break;
+      if (count >= 50) break;
       
       try {
         const linkElement = card.querySelector('h3 a, a[href*="/company"]');
@@ -343,8 +345,8 @@ async function scrapeRobotaUa(): Promise<VacancyData[]> {
         
         if (!title || title.length < 3) continue;
         
-        const companyElement = card.querySelector('[class*="company"]');
-        const company = companyElement?.textContent?.trim() || 'Не вказано';
+        const companyElement = card.querySelector('a[class*="company"], div[class*="company"], span[class*="company"], [class*="employer"]');
+        const company = companyElement?.textContent?.trim() || 'Компанія не вказана';
         
         const cardText = card.textContent?.toLowerCase() || '';
         
@@ -465,7 +467,7 @@ async function scrapeDouUa(): Promise<VacancyData[]> {
     
     let count = 0;
     for (const card of Array.from(jobCards)) {
-      if (count >= 20) break;
+      if (count >= 50) break;
       
       try {
         const linkElement = card.querySelector('a.vt, a[class*="title"], h2 a, h3 a');
@@ -479,8 +481,8 @@ async function scrapeDouUa(): Promise<VacancyData[]> {
         
         if (!title || title.length < 3) continue;
         
-        const companyElement = card.querySelector('a.company, [class*="company"]');
-        const company = companyElement?.textContent?.trim() || 'Не вказано';
+        const companyElement = card.querySelector('a.company, div[class*="company"], span[class*="company"], [class*="employer"]');
+        const company = companyElement?.textContent?.trim() || 'Компанія не вказана';
         
         const locationElement = card.querySelector('span.cities, [class*="location"], [class*="city"]');
         const location = locationElement?.textContent?.trim() || 'Україна';
