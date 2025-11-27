@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { DOMParser } from 'https://esm.sh/linkedom@0.14.26';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -170,35 +171,67 @@ async function scrapeWorkUa(): Promise<VacancyData[]> {
   const vacancies: VacancyData[] = [];
   
   try {
-    // Fetch IT jobs from work.ua
-    const response = await fetch('https://www.work.ua/jobs-it/?page=1');
+    const response = await fetch('https://www.work.ua/jobs-it/?page=1', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
     const html = await response.text();
     
-    // Simple regex-based parsing (in production, use a proper HTML parser)
-    const jobPattern = /<div class="card card-hover card-visited card-list-item"[^>]*>[\s\S]*?<h2[^>]*>[\s\S]*?<a href="([^"]*)"[^>]*>([^<]+)<\/a>[\s\S]*?<span class="add-top-xs">([^<]+)<\/span>[\s\S]*?<\/div>/gi;
+    console.log(`work.ua HTML length: ${html.length}`);
     
-    let match;
-    let count = 0;
-    while ((match = jobPattern.exec(html)) !== null && count < 20) {
-      const url = match[1].startsWith('http') ? match[1] : `https://www.work.ua${match[1]}`;
-      const title = match[2].trim();
-      const company = match[3].trim();
-      
-      vacancies.push({
-        title,
-        company_name: company || 'Не вказано',
-        location: 'Україна',
-        salary_currency: 'UAH',
-        employment_type: 'full-time',
-        experience_required: '1-5-years',
-        short_description: `Вакансія ${title} від компанії ${company}`,
-        full_description: `<p>Вакансія ${title} від компанії ${company}. Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
-        source: 'work.ua',
-        source_url: url,
-        posted_date: new Date().toISOString(),
-      });
-      count++;
+    // Use DOMParser for more reliable parsing
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    if (!doc) {
+      console.error('Failed to parse work.ua HTML');
+      return vacancies;
     }
+    
+    // Try multiple selectors as structure might have changed
+    const jobCards = doc.querySelectorAll('div.card.card-hover, div[class*="job"], div[class*="vacancy"]');
+    console.log(`work.ua found ${jobCards.length} potential job cards`);
+    
+    let count = 0;
+    for (const card of Array.from(jobCards)) {
+      if (count >= 20) break;
+      
+      try {
+        const linkElement = card.querySelector('h2 a, a[href*="/jobs/"]');
+        if (!linkElement) continue;
+        
+        const href = linkElement.getAttribute('href');
+        if (!href) continue;
+        
+        const url = href.startsWith('http') ? href : `https://www.work.ua${href}`;
+        const title = linkElement.textContent?.trim() || '';
+        
+        if (!title) continue;
+        
+        const companyElement = card.querySelector('span.add-top-xs, [class*="company"]');
+        const company = companyElement?.textContent?.trim() || 'Не вказано';
+        
+        vacancies.push({
+          title,
+          company_name: company,
+          location: 'Україна',
+          salary_currency: 'UAH',
+          employment_type: 'full-time',
+          experience_required: '1-5-years',
+          short_description: `Вакансія ${title} від компанії ${company}`,
+          full_description: `<p>Вакансія ${title} від компанії ${company}. Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
+          source: 'work.ua',
+          source_url: url,
+          posted_date: new Date().toISOString(),
+        });
+        count++;
+      } catch (itemError) {
+        console.error('Error parsing work.ua item:', itemError);
+      }
+    }
+    
+    console.log(`work.ua successfully parsed ${count} vacancies`);
   } catch (error) {
     console.error('Error scraping work.ua:', error);
   }
@@ -210,35 +243,66 @@ async function scrapeRobotaUa(): Promise<VacancyData[]> {
   const vacancies: VacancyData[] = [];
   
   try {
-    // Fetch IT jobs from robota.ua
-    const response = await fetch('https://robota.ua/zapros/it/ukraine');
+    const response = await fetch('https://robota.ua/zapros/it/ukraine', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
     const html = await response.text();
     
-    // Simple parsing for robota.ua
-    const jobPattern = /<h3[^>]*class="[^"]*santa-job-tile-title[^"]*"[^>]*>[\s\S]*?<a[^>]*href="([^"]*)"[^>]*>([^<]+)<\/a>[\s\S]*?<p[^>]*class="[^"]*santa-company-name[^"]*"[^>]*>([^<]+)<\/p>/gi;
+    console.log(`robota.ua HTML length: ${html.length}`);
     
-    let match;
-    let count = 0;
-    while ((match = jobPattern.exec(html)) !== null && count < 20) {
-      const url = match[1].startsWith('http') ? match[1] : `https://robota.ua${match[1]}`;
-      const title = match[2].trim();
-      const company = match[3].trim();
-      
-      vacancies.push({
-        title,
-        company_name: company || 'Не вказано',
-        location: 'Україна',
-        salary_currency: 'UAH',
-        employment_type: 'full-time',
-        experience_required: '1-5-years',
-        short_description: `Вакансія ${title} від компанії ${company}`,
-        full_description: `<p>Вакансія ${title} від компанії ${company}. Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
-        source: 'robota.ua',
-        source_url: url,
-        posted_date: new Date().toISOString(),
-      });
-      count++;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    if (!doc) {
+      console.error('Failed to parse robota.ua HTML');
+      return vacancies;
     }
+    
+    // Try multiple selectors
+    const jobCards = doc.querySelectorAll('[class*="job-tile"], [class*="vacancy"], article, div[class*="santa"]');
+    console.log(`robota.ua found ${jobCards.length} potential job cards`);
+    
+    let count = 0;
+    for (const card of Array.from(jobCards)) {
+      if (count >= 20) break;
+      
+      try {
+        const linkElement = card.querySelector('h3 a, a[href*="/company"]');
+        if (!linkElement) continue;
+        
+        const href = linkElement.getAttribute('href');
+        if (!href) continue;
+        
+        const url = href.startsWith('http') ? href : `https://robota.ua${href}`;
+        const title = linkElement.textContent?.trim() || '';
+        
+        if (!title || title.length < 3) continue;
+        
+        const companyElement = card.querySelector('[class*="company"]');
+        const company = companyElement?.textContent?.trim() || 'Не вказано';
+        
+        vacancies.push({
+          title,
+          company_name: company,
+          location: 'Україна',
+          salary_currency: 'UAH',
+          employment_type: 'full-time',
+          experience_required: '1-5-years',
+          short_description: `Вакансія ${title} від компанії ${company}`,
+          full_description: `<p>Вакансія ${title} від компанії ${company}. Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
+          source: 'robota.ua',
+          source_url: url,
+          posted_date: new Date().toISOString(),
+        });
+        count++;
+      } catch (itemError) {
+        console.error('Error parsing robota.ua item:', itemError);
+      }
+    }
+    
+    console.log(`robota.ua successfully parsed ${count} vacancies`);
   } catch (error) {
     console.error('Error scraping robota.ua:', error);
   }
@@ -250,36 +314,69 @@ async function scrapeDouUa(): Promise<VacancyData[]> {
   const vacancies: VacancyData[] = [];
   
   try {
-    // Fetch jobs from dou.ua
-    const response = await fetch('https://jobs.dou.ua/vacancies/?category=All');
+    const response = await fetch('https://jobs.dou.ua/vacancies/?category=All', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
     const html = await response.text();
     
-    // Simple parsing for dou.ua
-    const jobPattern = /<li class="l-vacancy"[^>]*>[\s\S]*?<a class="vt"[^>]*href="([^"]*)"[^>]*>([^<]+)<\/a>[\s\S]*?<a class="company"[^>]*>([^<]+)<\/a>[\s\S]*?<span class="cities">([^<]+)<\/span>/gi;
+    console.log(`dou.ua HTML length: ${html.length}`);
     
-    let match;
-    let count = 0;
-    while ((match = jobPattern.exec(html)) !== null && count < 20) {
-      const url = match[1];
-      const title = match[2].trim();
-      const company = match[3].trim();
-      const location = match[4].trim();
-      
-      vacancies.push({
-        title,
-        company_name: company || 'Не вказано',
-        location: location || 'Україна',
-        salary_currency: 'UAH',
-        employment_type: 'full-time',
-        experience_required: '1-5-years',
-        short_description: `Вакансія ${title} від компанії ${company}`,
-        full_description: `<p>Вакансія ${title} від компанії ${company}. Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
-        source: 'dou.ua',
-        source_url: url,
-        posted_date: new Date().toISOString(),
-      });
-      count++;
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    if (!doc) {
+      console.error('Failed to parse dou.ua HTML');
+      return vacancies;
     }
+    
+    // Try multiple selectors
+    const jobCards = doc.querySelectorAll('li.l-vacancy, li[class*="vacancy"], div.vacancy, article');
+    console.log(`dou.ua found ${jobCards.length} potential job cards`);
+    
+    let count = 0;
+    for (const card of Array.from(jobCards)) {
+      if (count >= 20) break;
+      
+      try {
+        const linkElement = card.querySelector('a.vt, a[class*="title"], h2 a, h3 a');
+        if (!linkElement) continue;
+        
+        const href = linkElement.getAttribute('href');
+        if (!href || !href.includes('dou.ua')) continue;
+        
+        const url = href;
+        const title = linkElement.textContent?.trim() || '';
+        
+        if (!title || title.length < 3) continue;
+        
+        const companyElement = card.querySelector('a.company, [class*="company"]');
+        const company = companyElement?.textContent?.trim() || 'Не вказано';
+        
+        const locationElement = card.querySelector('span.cities, [class*="location"], [class*="city"]');
+        const location = locationElement?.textContent?.trim() || 'Україна';
+        
+        vacancies.push({
+          title,
+          company_name: company,
+          location,
+          salary_currency: 'UAH',
+          employment_type: 'full-time',
+          experience_required: '1-5-years',
+          short_description: `Вакансія ${title} від компанії ${company}`,
+          full_description: `<p>Вакансія ${title} від компанії ${company}. Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
+          source: 'dou.ua',
+          source_url: url,
+          posted_date: new Date().toISOString(),
+        });
+        count++;
+      } catch (itemError) {
+        console.error('Error parsing dou.ua item:', itemError);
+      }
+    }
+    
+    console.log(`dou.ua successfully parsed ${count} vacancies`);
   } catch (error) {
     console.error('Error scraping dou.ua:', error);
   }
