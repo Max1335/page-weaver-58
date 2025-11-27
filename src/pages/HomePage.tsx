@@ -11,11 +11,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Filter, Briefcase } from 'lucide-react';
-import { mockVacancies } from '@/data/mockVacancies';
+import { Filter, Briefcase, RefreshCw } from 'lucide-react';
 import { SearchFilters, SortOption, EmploymentType, ExperienceLevel, Source, DateFilter } from '@/types/vacancy';
+import { useVacancies, useTriggerScraping } from '@/hooks/useVacancies';
+import { useToast } from '@/hooks/use-toast';
 
 const HomePage = () => {
+  const { toast } = useToast();
   const [filters, setFilters] = useState<SearchFilters>({
     search: '',
     location: '',
@@ -26,86 +28,39 @@ const HomePage = () => {
     sortBy: 'date_desc',
   });
 
-  const [filteredVacancies, setFilteredVacancies] = useState(mockVacancies);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isScraping, setIsScraping] = useState(false);
 
-  useEffect(() => {
-    filterVacancies();
-  }, [filters]);
+  const { data: vacancies = [], isLoading, refetch } = useVacancies(filters);
+  const triggerScraping = useTriggerScraping();
 
-  const filterVacancies = () => {
-    let result = [...mockVacancies];
-
-    // Search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      result = result.filter(
-        (v) =>
-          v.title.toLowerCase().includes(searchLower) ||
-          v.shortDescription.toLowerCase().includes(searchLower) ||
-          v.fullDescription.toLowerCase().includes(searchLower)
-      );
+  const handleScrapingTrigger = async () => {
+    setIsScraping(true);
+    try {
+      await triggerScraping('all');
+      toast({
+        title: 'Оновлення розпочато',
+        description: 'Завантаження нових вакансій може зайняти кілька хвилин',
+      });
+      
+      // Refetch after a delay to get new data
+      setTimeout(() => {
+        refetch();
+        toast({
+          title: 'Вакансії оновлено',
+          description: 'Список вакансій успішно оновлено',
+        });
+      }, 5000);
+    } catch (error) {
+      console.error('Error triggering scraping:', error);
+      toast({
+        title: 'Помилка',
+        description: 'Не вдалося оновити вакансії',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsScraping(false);
     }
-
-    // Location filter
-    if (filters.location) {
-      const locationLower = filters.location.toLowerCase();
-      result = result.filter((v) => v.location.toLowerCase().includes(locationLower));
-    }
-
-    // Salary filter
-    if (filters.salaryMin) {
-      result = result.filter((v) => !v.salaryMax || v.salaryMax >= filters.salaryMin!);
-    }
-    if (filters.salaryMax) {
-      result = result.filter((v) => !v.salaryMin || v.salaryMin <= filters.salaryMax!);
-    }
-
-    // Employment type filter
-    if (filters.employmentTypes.length > 0) {
-      result = result.filter((v) => filters.employmentTypes.includes(v.employmentType));
-    }
-
-    // Experience level filter
-    if (filters.experienceLevels.length > 0) {
-      result = result.filter((v) => filters.experienceLevels.includes(v.experienceRequired));
-    }
-
-    // Date filter
-    if (filters.datePosted) {
-      const now = Date.now();
-      const dateThresholds = {
-        last_24h: 24 * 60 * 60 * 1000,
-        last_3_days: 3 * 24 * 60 * 60 * 1000,
-        last_week: 7 * 24 * 60 * 60 * 1000,
-        last_month: 30 * 24 * 60 * 60 * 1000,
-      };
-      const threshold = dateThresholds[filters.datePosted];
-      result = result.filter((v) => now - new Date(v.postedDate).getTime() <= threshold);
-    }
-
-    // Source filter
-    if (filters.sources.length > 0) {
-      result = result.filter((v) => filters.sources.includes(v.source));
-    }
-
-    // Sorting
-    switch (filters.sortBy) {
-      case 'date_desc':
-        result.sort((a, b) => new Date(b.postedDate).getTime() - new Date(a.postedDate).getTime());
-        break;
-      case 'date_asc':
-        result.sort((a, b) => new Date(a.postedDate).getTime() - new Date(b.postedDate).getTime());
-        break;
-      case 'salary_desc':
-        result.sort((a, b) => (b.salaryMax || 0) - (a.salaryMax || 0));
-        break;
-      case 'salary_asc':
-        result.sort((a, b) => (a.salaryMin || Infinity) - (b.salaryMin || Infinity));
-        break;
-    }
-
-    setFilteredVacancies(result);
   };
 
   const activeFilterCount =
@@ -179,7 +134,7 @@ const HomePage = () => {
             location={filters.location}
             onSearchChange={(value) => setFilters({ ...filters, search: value })}
             onLocationChange={(value) => setFilters({ ...filters, location: value })}
-            onSearch={filterVacancies}
+            onSearch={() => refetch()}
           />
         </div>
       </header>
@@ -200,8 +155,18 @@ const HomePage = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <p className="text-lg font-medium">
-                  Знайдено <span className="text-primary font-bold">{filteredVacancies.length}</span> вакансій
+                  Знайдено <span className="text-primary font-bold">{vacancies.length}</span> вакансій
                 </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleScrapingTrigger}
+                  disabled={isScraping}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isScraping ? 'animate-spin' : ''}`} />
+                  {isScraping ? 'Оновлення...' : 'Оновити'}
+                </Button>
                 {/* Mobile Filter Button */}
                 <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                   <SheetTrigger asChild>
@@ -241,8 +206,16 @@ const HomePage = () => {
 
             {/* Vacancy Cards */}
             <div className="space-y-4">
-              {filteredVacancies.length > 0 ? (
-                filteredVacancies.map((vacancy) => (
+              {isLoading ? (
+                <div className="text-center py-16">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                    <RefreshCw className="h-8 w-8 text-muted-foreground animate-spin" />
+                  </div>
+                  <h3 className="text-2xl font-semibold mb-2">Завантаження...</h3>
+                  <p className="text-muted-foreground">Зачекайте, будь ласка</p>
+                </div>
+              ) : vacancies.length > 0 ? (
+                vacancies.map((vacancy) => (
                   <VacancyCard key={vacancy.id} vacancy={vacancy} />
                 ))
               ) : (

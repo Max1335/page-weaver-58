@@ -34,17 +34,17 @@ const sourceColors: Record<string, string> = {
 };
 
 export const VacancyCard = ({ vacancy }: VacancyCardProps) => {
-  const formattedDate = formatDistanceToNow(new Date(vacancy.postedDate), {
+  const formattedDate = formatDistanceToNow(new Date(vacancy.posted_date), {
     addSuffix: true,
     locale: uk,
   });
 
-  const formattedSalary =
-    vacancy.salaryMin && vacancy.salaryMax
-      ? `${vacancy.salaryMin.toLocaleString()} - ${vacancy.salaryMax.toLocaleString()} ${vacancy.salaryCurrency}`
-      : vacancy.salaryMin
-      ? `Від ${vacancy.salaryMin.toLocaleString()} ${vacancy.salaryCurrency}`
-      : 'За домовленістю';
+      const formattedSalary =
+        vacancy.salary_min && vacancy.salary_max
+          ? `${vacancy.salary_min.toLocaleString()} - ${vacancy.salary_max.toLocaleString()} ${vacancy.salary_currency}`
+          : vacancy.salary_min
+          ? `Від ${vacancy.salary_min.toLocaleString()} ${vacancy.salary_currency}`
+          : 'За домовленістю';
 
   return (
     <Link to={`/vacancy/${vacancy.id}`}>
@@ -64,17 +64,17 @@ export const VacancyCard = ({ vacancy }: VacancyCardProps) => {
           </div>
 
           <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed">
-            {vacancy.shortDescription}
+            {vacancy.short_description}
           </p>
 
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary" className="gap-1">
               <Briefcase className="h-3 w-3" />
-              {experienceLabels[vacancy.experienceRequired]}
+              {experienceLabels[vacancy.experience_required]}
             </Badge>
             <Badge variant="secondary" className="gap-1">
               <Clock className="h-3 w-3" />
-              {employmentTypeLabels[vacancy.employmentType]}
+              {employmentTypeLabels[vacancy.employment_type]}
             </Badge>
           </div>
 
@@ -82,7 +82,7 @@ export const VacancyCard = ({ vacancy }: VacancyCardProps) => {
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 text-sm text-foreground">
                 <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{vacancy.companyName}</span>
+                <span className="font-medium">{vacancy.company_name}</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4" />

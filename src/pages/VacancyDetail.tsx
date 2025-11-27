@@ -3,10 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Building2, MapPin, Calendar, Briefcase, Clock, ExternalLink } from 'lucide-react';
-import { mockVacancies } from '@/data/mockVacancies';
+import { ArrowLeft, Building2, MapPin, Calendar, Briefcase, Clock, ExternalLink, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { uk } from 'date-fns/locale';
+import { useVacancyById } from '@/hooks/useVacancies';
 
 const employmentTypeLabels: Record<string, string> = {
   'full-time': 'Повна зайнятість',
@@ -35,7 +35,18 @@ const VacancyDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const vacancy = mockVacancies.find((v) => v.id === id);
+  const { data: vacancy, isLoading } = useVacancyById(id!);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+          <h2 className="text-xl font-semibold">Завантаження...</h2>
+        </div>
+      </div>
+    );
+  }
 
   if (!vacancy) {
     return (
@@ -48,20 +59,20 @@ const VacancyDetail = () => {
     );
   }
 
-  const formattedDate = formatDistanceToNow(new Date(vacancy.postedDate), {
+  const formattedDate = formatDistanceToNow(new Date(vacancy.posted_date), {
     addSuffix: true,
     locale: uk,
   });
 
   const formattedSalary =
-    vacancy.salaryMin && vacancy.salaryMax
-      ? `${vacancy.salaryMin.toLocaleString()} - ${vacancy.salaryMax.toLocaleString()} ${vacancy.salaryCurrency}`
-      : vacancy.salaryMin
-      ? `Від ${vacancy.salaryMin.toLocaleString()} ${vacancy.salaryCurrency}`
+    vacancy.salary_min && vacancy.salary_max
+      ? `${vacancy.salary_min.toLocaleString()} - ${vacancy.salary_max.toLocaleString()} ${vacancy.salary_currency}`
+      : vacancy.salary_min
+      ? `Від ${vacancy.salary_min.toLocaleString()} ${vacancy.salary_currency}`
       : 'За домовленістю';
 
   const handleApply = () => {
-    window.open(vacancy.sourceUrl, '_blank');
+    window.open(vacancy.source_url, '_blank');
   };
 
   return (
@@ -102,7 +113,7 @@ const VacancyDetail = () => {
               <Building2 className="h-5 w-5 text-muted-foreground flex-shrink-0" />
               <div>
                 <div className="text-xs text-muted-foreground">Компанія</div>
-                <div className="font-medium text-lg">{vacancy.companyName}</div>
+                <div className="font-medium text-lg">{vacancy.company_name}</div>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -124,11 +135,11 @@ const VacancyDetail = () => {
           <div className="flex flex-wrap gap-2 mb-8">
             <Badge variant="secondary" className="gap-1">
               <Briefcase className="h-3 w-3" />
-              {experienceLabels[vacancy.experienceRequired]}
+              {experienceLabels[vacancy.experience_required]}
             </Badge>
             <Badge variant="secondary" className="gap-1">
               <Clock className="h-3 w-3" />
-              {employmentTypeLabels[vacancy.employmentType]}
+              {employmentTypeLabels[vacancy.employment_type]}
             </Badge>
             <Badge className={`${sourceColors[vacancy.source]} text-white`}>
               {vacancy.source}
@@ -142,7 +153,7 @@ const VacancyDetail = () => {
             <h2 className="text-xl font-semibold mb-4">Опис вакансії</h2>
             <div
               className="prose prose-blue max-w-none"
-              dangerouslySetInnerHTML={{ __html: vacancy.fullDescription }}
+              dangerouslySetInnerHTML={{ __html: vacancy.full_description }}
               style={{
                 lineHeight: '1.75',
               }}
