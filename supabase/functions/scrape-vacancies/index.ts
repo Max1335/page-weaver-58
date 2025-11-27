@@ -180,7 +180,6 @@ async function scrapeWorkUa(): Promise<VacancyData[]> {
     
     console.log(`work.ua HTML length: ${html.length}`);
     
-    // Use DOMParser for more reliable parsing
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     
@@ -189,7 +188,6 @@ async function scrapeWorkUa(): Promise<VacancyData[]> {
       return vacancies;
     }
     
-    // Try multiple selectors as structure might have changed
     const jobCards = doc.querySelectorAll('div.card.card-hover, div[class*="job"], div[class*="vacancy"]');
     console.log(`work.ua found ${jobCards.length} potential job cards`);
     
@@ -212,15 +210,81 @@ async function scrapeWorkUa(): Promise<VacancyData[]> {
         const companyElement = card.querySelector('span.add-top-xs, [class*="company"]');
         const company = companyElement?.textContent?.trim() || 'Не вказано';
         
+        // Extract location, salary, and other details from card text
+        const cardText = card.textContent?.toLowerCase() || '';
+        
+        // Parse location
+        let location = 'Україна';
+        const locationElement = card.querySelector('[class*="location"], [class*="city"]');
+        if (locationElement) {
+          location = locationElement.textContent?.trim() || 'Україна';
+        } else if (cardText.includes('київ')) location = 'Київ';
+        else if (cardText.includes('харків')) location = 'Харків';
+        else if (cardText.includes('львів')) location = 'Львів';
+        else if (cardText.includes('одеса')) location = 'Одеса';
+        else if (cardText.includes('дніпро')) location = 'Дніпро';
+        else if (cardText.includes('remote') || cardText.includes('віддалено')) location = 'Віддалена робота';
+        
+        // Parse salary
+        let salary_min: number | undefined;
+        let salary_max: number | undefined;
+        let salary_currency = 'UAH';
+        
+        const salaryMatch = cardText.match(/(\d+)\s*(?:000)?\s*[-–—]\s*(\d+)\s*(?:000)?\s*(грн|uah|₴|\$|usd)/i);
+        if (salaryMatch) {
+          salary_min = parseInt(salaryMatch[1]) * (salaryMatch[0].includes('000') ? 1000 : 1);
+          salary_max = parseInt(salaryMatch[2]) * (salaryMatch[0].includes('000') ? 1000 : 1);
+          if (salaryMatch[3].includes('$') || salaryMatch[3].toLowerCase().includes('usd')) {
+            salary_currency = 'USD';
+          }
+        }
+        
+        // Parse employment type
+        let employment_type: string;
+        if (cardText.includes('part-time') || cardText.includes('часткова')) {
+          employment_type = 'part-time';
+        } else if (cardText.includes('contract') || cardText.includes('контракт')) {
+          employment_type = 'contract';
+        } else if (cardText.includes('internship') || cardText.includes('стажування')) {
+          employment_type = 'internship';
+        } else if (cardText.includes('temporary') || cardText.includes('тимчасова')) {
+          employment_type = 'temporary';
+        } else {
+          employment_type = 'full-time';
+        }
+        
+        // Parse experience level
+        let experience_required: string;
+        if (cardText.includes('no experience') || cardText.includes('без досвіду') || cardText.includes('junior')) {
+          experience_required = 'no-experience';
+        } else if (cardText.includes('1 рік') || cardText.includes('1 year')) {
+          experience_required = '1-year';
+        } else if (cardText.includes('1-3') || cardText.includes('2-3') || cardText.includes('middle')) {
+          experience_required = '1-5-years';
+        } else if (cardText.includes('5-10') || cardText.includes('senior')) {
+          experience_required = '5-10-years';
+        } else if (cardText.includes('10+') || cardText.includes('lead') || cardText.includes('architect')) {
+          experience_required = '10-plus-years';
+        } else {
+          experience_required = '1-5-years';
+        }
+        
+        // Extract short description
+        const descElement = card.querySelector('p, div[class*="description"]');
+        const short_description = descElement?.textContent?.trim().substring(0, 200) || 
+          `Вакансія ${title} від компанії ${company}`;
+        
         vacancies.push({
           title,
           company_name: company,
-          location: 'Україна',
-          salary_currency: 'UAH',
-          employment_type: 'full-time',
-          experience_required: '1-5-years',
-          short_description: `Вакансія ${title} від компанії ${company}`,
-          full_description: `<p>Вакансія ${title} від компанії ${company}. Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
+          location,
+          salary_min,
+          salary_max,
+          salary_currency,
+          employment_type,
+          experience_required,
+          short_description,
+          full_description: `<p>${short_description}</p><p>Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
           source: 'work.ua',
           source_url: url,
           posted_date: new Date().toISOString(),
@@ -260,7 +324,6 @@ async function scrapeRobotaUa(): Promise<VacancyData[]> {
       return vacancies;
     }
     
-    // Try multiple selectors
     const jobCards = doc.querySelectorAll('[class*="job-tile"], [class*="vacancy"], article, div[class*="santa"]');
     console.log(`robota.ua found ${jobCards.length} potential job cards`);
     
@@ -283,15 +346,81 @@ async function scrapeRobotaUa(): Promise<VacancyData[]> {
         const companyElement = card.querySelector('[class*="company"]');
         const company = companyElement?.textContent?.trim() || 'Не вказано';
         
+        const cardText = card.textContent?.toLowerCase() || '';
+        
+        // Parse location
+        let location = 'Україна';
+        const locationElement = card.querySelector('[class*="location"], [class*="city"]');
+        if (locationElement) {
+          location = locationElement.textContent?.trim() || 'Україна';
+        } else if (cardText.includes('київ')) location = 'Київ';
+        else if (cardText.includes('харків')) location = 'Харків';
+        else if (cardText.includes('львів')) location = 'Львів';
+        else if (cardText.includes('одеса')) location = 'Одеса';
+        else if (cardText.includes('дніпро')) location = 'Дніпро';
+        else if (cardText.includes('remote') || cardText.includes('віддалено')) location = 'Віддалена робота';
+        
+        // Parse salary
+        let salary_min: number | undefined;
+        let salary_max: number | undefined;
+        let salary_currency = 'UAH';
+        
+        const salaryElement = card.querySelector('[class*="salary"]');
+        const salaryText = salaryElement?.textContent?.toLowerCase() || cardText;
+        const salaryMatch = salaryText.match(/(\d+)\s*(?:000)?\s*[-–—]\s*(\d+)\s*(?:000)?\s*(грн|uah|₴|\$|usd)/i);
+        if (salaryMatch) {
+          salary_min = parseInt(salaryMatch[1]) * (salaryMatch[0].includes('000') ? 1000 : 1);
+          salary_max = parseInt(salaryMatch[2]) * (salaryMatch[0].includes('000') ? 1000 : 1);
+          if (salaryMatch[3].includes('$') || salaryMatch[3].toLowerCase().includes('usd')) {
+            salary_currency = 'USD';
+          }
+        }
+        
+        // Parse employment type
+        let employment_type: string;
+        if (cardText.includes('part-time') || cardText.includes('часткова')) {
+          employment_type = 'part-time';
+        } else if (cardText.includes('contract') || cardText.includes('контракт')) {
+          employment_type = 'contract';
+        } else if (cardText.includes('internship') || cardText.includes('стажування')) {
+          employment_type = 'internship';
+        } else if (cardText.includes('temporary') || cardText.includes('тимчасова')) {
+          employment_type = 'temporary';
+        } else {
+          employment_type = 'full-time';
+        }
+        
+        // Parse experience level
+        let experience_required: string;
+        if (cardText.includes('no experience') || cardText.includes('без досвіду') || cardText.includes('junior')) {
+          experience_required = 'no-experience';
+        } else if (cardText.includes('1 рік') || cardText.includes('1 year')) {
+          experience_required = '1-year';
+        } else if (cardText.includes('1-3') || cardText.includes('2-3') || cardText.includes('middle')) {
+          experience_required = '1-5-years';
+        } else if (cardText.includes('5-10') || cardText.includes('senior')) {
+          experience_required = '5-10-years';
+        } else if (cardText.includes('10+') || cardText.includes('lead') || cardText.includes('architect')) {
+          experience_required = '10-plus-years';
+        } else {
+          experience_required = '1-5-years';
+        }
+        
+        const descElement = card.querySelector('p, div[class*="description"]');
+        const short_description = descElement?.textContent?.trim().substring(0, 200) || 
+          `Вакансія ${title} від компанії ${company}`;
+        
         vacancies.push({
           title,
           company_name: company,
-          location: 'Україна',
-          salary_currency: 'UAH',
-          employment_type: 'full-time',
-          experience_required: '1-5-years',
-          short_description: `Вакансія ${title} від компанії ${company}`,
-          full_description: `<p>Вакансія ${title} від компанії ${company}. Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
+          location,
+          salary_min,
+          salary_max,
+          salary_currency,
+          employment_type,
+          experience_required,
+          short_description,
+          full_description: `<p>${short_description}</p><p>Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
           source: 'robota.ua',
           source_url: url,
           posted_date: new Date().toISOString(),
@@ -331,7 +460,6 @@ async function scrapeDouUa(): Promise<VacancyData[]> {
       return vacancies;
     }
     
-    // Try multiple selectors
     const jobCards = doc.querySelectorAll('li.l-vacancy, li[class*="vacancy"], div.vacancy, article');
     console.log(`dou.ua found ${jobCards.length} potential job cards`);
     
@@ -357,15 +485,69 @@ async function scrapeDouUa(): Promise<VacancyData[]> {
         const locationElement = card.querySelector('span.cities, [class*="location"], [class*="city"]');
         const location = locationElement?.textContent?.trim() || 'Україна';
         
+        const cardText = card.textContent?.toLowerCase() || '';
+        
+        // Parse salary
+        let salary_min: number | undefined;
+        let salary_max: number | undefined;
+        let salary_currency = 'UAH';
+        
+        const salaryElement = card.querySelector('[class*="salary"]');
+        const salaryText = salaryElement?.textContent?.toLowerCase() || cardText;
+        const salaryMatch = salaryText.match(/(\d+)\s*(?:000)?\s*[-–—]\s*(\d+)\s*(?:000)?\s*(грн|uah|₴|\$|usd)/i);
+        if (salaryMatch) {
+          salary_min = parseInt(salaryMatch[1]) * (salaryMatch[0].includes('000') ? 1000 : 1);
+          salary_max = parseInt(salaryMatch[2]) * (salaryMatch[0].includes('000') ? 1000 : 1);
+          if (salaryMatch[3].includes('$') || salaryMatch[3].toLowerCase().includes('usd')) {
+            salary_currency = 'USD';
+          }
+        }
+        
+        // Parse employment type
+        let employment_type: string;
+        if (cardText.includes('part-time') || cardText.includes('часткова')) {
+          employment_type = 'part-time';
+        } else if (cardText.includes('contract') || cardText.includes('контракт')) {
+          employment_type = 'contract';
+        } else if (cardText.includes('internship') || cardText.includes('стажування')) {
+          employment_type = 'internship';
+        } else if (cardText.includes('temporary') || cardText.includes('тимчасова')) {
+          employment_type = 'temporary';
+        } else {
+          employment_type = 'full-time';
+        }
+        
+        // Parse experience level
+        let experience_required: string;
+        if (cardText.includes('no experience') || cardText.includes('без досвіду') || cardText.includes('junior')) {
+          experience_required = 'no-experience';
+        } else if (cardText.includes('1 рік') || cardText.includes('1 year')) {
+          experience_required = '1-year';
+        } else if (cardText.includes('1-3') || cardText.includes('2-3') || cardText.includes('middle')) {
+          experience_required = '1-5-years';
+        } else if (cardText.includes('5-10') || cardText.includes('senior')) {
+          experience_required = '5-10-years';
+        } else if (cardText.includes('10+') || cardText.includes('lead') || cardText.includes('architect')) {
+          experience_required = '10-plus-years';
+        } else {
+          experience_required = '1-5-years';
+        }
+        
+        const descElement = card.querySelector('p, div[class*="description"]');
+        const short_description = descElement?.textContent?.trim().substring(0, 200) || 
+          `Вакансія ${title} від компанії ${company}`;
+        
         vacancies.push({
           title,
           company_name: company,
           location,
-          salary_currency: 'UAH',
-          employment_type: 'full-time',
-          experience_required: '1-5-years',
-          short_description: `Вакансія ${title} від компанії ${company}`,
-          full_description: `<p>Вакансія ${title} від компанії ${company}. Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
+          salary_min,
+          salary_max,
+          salary_currency,
+          employment_type,
+          experience_required,
+          short_description,
+          full_description: `<p>${short_description}</p><p>Для отримання детальної інформації, відвідайте сторінку вакансії.</p>`,
           source: 'dou.ua',
           source_url: url,
           posted_date: new Date().toISOString(),
