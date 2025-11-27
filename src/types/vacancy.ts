@@ -7,19 +7,19 @@ export type SortOption = 'date_desc' | 'date_asc' | 'salary_desc' | 'salary_asc'
 export interface Vacancy {
   id: string;
   title: string;
-  companyName: string;
+  company_name: string;
   location: string;
-  salaryMin?: number;
-  salaryMax?: number;
-  salaryCurrency: string;
-  employmentType: EmploymentType;
-  experienceRequired: ExperienceLevel;
-  shortDescription: string;
-  fullDescription: string;
+  salary_min?: number;
+  salary_max?: number;
+  salary_currency: string;
+  employment_type: EmploymentType;
+  experience_required: ExperienceLevel;
+  short_description: string;
+  full_description: string;
   source: Source;
-  sourceUrl: string;
-  postedDate: string;
-  isActive: boolean;
+  source_url: string;
+  posted_date: string;
+  is_active: boolean;
 }
 
 export interface SearchFilters {
