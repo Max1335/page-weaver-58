@@ -14,16 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      scraping_logs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          source: Database["public"]["Enums"]["vacancy_source"]
+          started_at: string
+          status: string
+          vacancies_added: number | null
+          vacancies_found: number | null
+          vacancies_updated: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          source: Database["public"]["Enums"]["vacancy_source"]
+          started_at?: string
+          status?: string
+          vacancies_added?: number | null
+          vacancies_found?: number | null
+          vacancies_updated?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          source?: Database["public"]["Enums"]["vacancy_source"]
+          started_at?: string
+          status?: string
+          vacancies_added?: number | null
+          vacancies_found?: number | null
+          vacancies_updated?: number | null
+        }
+        Relationships: []
+      }
+      vacancies: {
+        Row: {
+          company_name: string
+          created_at: string
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          experience_required: Database["public"]["Enums"]["experience_level"]
+          full_description: string | null
+          id: string
+          is_active: boolean | null
+          last_updated: string
+          location: string
+          posted_date: string
+          salary_currency: string | null
+          salary_max: number | null
+          salary_min: number | null
+          scraped_date: string
+          short_description: string | null
+          source: Database["public"]["Enums"]["vacancy_source"]
+          source_url: string
+          title: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          experience_required: Database["public"]["Enums"]["experience_level"]
+          full_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_updated?: string
+          location: string
+          posted_date: string
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          scraped_date?: string
+          short_description?: string | null
+          source: Database["public"]["Enums"]["vacancy_source"]
+          source_url: string
+          title: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          experience_required?: Database["public"]["Enums"]["experience_level"]
+          full_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_updated?: string
+          location?: string
+          posted_date?: string
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          scraped_date?: string
+          short_description?: string | null
+          source?: Database["public"]["Enums"]["vacancy_source"]
+          source_url?: string
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      deactivate_old_vacancies: { Args: never; Returns: number }
     }
     Enums: {
-      [_ in never]: never
+      employment_type:
+        | "full-time"
+        | "part-time"
+        | "temporary"
+        | "contract"
+        | "internship"
+      experience_level:
+        | "no-experience"
+        | "1-year"
+        | "1-5-years"
+        | "5-10-years"
+        | "10-plus-years"
+      vacancy_source: "work.ua" | "robota.ua" | "dou.ua" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +263,22 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      employment_type: [
+        "full-time",
+        "part-time",
+        "temporary",
+        "contract",
+        "internship",
+      ],
+      experience_level: [
+        "no-experience",
+        "1-year",
+        "1-5-years",
+        "5-10-years",
+        "10-plus-years",
+      ],
+      vacancy_source: ["work.ua", "robota.ua", "dou.ua", "other"],
+    },
   },
 } as const
