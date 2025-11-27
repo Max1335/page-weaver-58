@@ -1,1 +1,7 @@
 project_id = "njytqerzevcizqbephoe"
+
+[functions.scrape-vacancies]
+verify_jwt = false
+
+[functions.schedule-scraping]
+verify_jwt = false
