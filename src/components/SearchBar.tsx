@@ -32,7 +32,7 @@ export const SearchBar = ({
             placeholder="Назва вакансії або ключові слова"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 h-12 bg-card border-border"
+            className="pl-10 h-12 bg-card border-border text-foreground"
           />
         </div>
         <div className="relative flex-1">
@@ -42,7 +42,7 @@ export const SearchBar = ({
             placeholder="Місто або регіон"
             value={location}
             onChange={(e) => onLocationChange(e.target.value)}
-            className="pl-10 h-12 bg-card border-border"
+            className="pl-10 h-12 bg-card border-border text-foreground"
           />
         </div>
         <Button type="submit" size="lg" className="h-12 px-8 bg-gradient-hero hover:opacity-90">
